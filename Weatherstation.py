@@ -20,15 +20,23 @@ class WeatherStation:
         tmp.append(struct.pack("f", self.Temperature))  # 4
         tmp.append(b";H")  # 2
         tmp.append(struct.pack("f", self.Humidity))  # 4
-        return bytes().join(tmp)
+        tmp.append(b";X")  # 2
+
+        bin = bytes().join(tmp)
+        # print(f"serialized {len(bin)} bytes")
+        return bin
 
     @staticmethod
     def Deserialize(bin: bytes):
         for msg in bin.split(b";"):
             t = chr(msg[0])
-            val = struct.unpack("f", msg[1:])
+
+            if t == "X":
+                break
+
+            val = struct.unpack("f", msg[1:])[0]
 
             if t == "H":
                 print(f"humidity = {val}")
             elif t == "T":
-                print(f"temerature = {val}")
+                print(f"temperature = {val}")

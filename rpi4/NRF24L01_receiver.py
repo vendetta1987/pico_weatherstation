@@ -1,20 +1,14 @@
-# https://github.com/bjarne-hansen/py-nrf24/blob/043cec77342c85c246381c34e6b9a8a3b13868a9/test/simple-receiver.py
 import argparse
-from datetime import datetime
 import struct
 import sys
 import time
 import traceback
+from datetime import datetime
+from Weatherstation import WeatherStation
 
 import pigpio
 from nrf24 import *
 
-
-#
-# A simple NRF24L receiver that connects to a PIGPIO instance on a hostname and port, default "localhost" and 8888, and
-# starts receiving data on the address specified.  Use the companion program "simple-sender.py" to send data to it from
-# a different Raspberry Pi.
-#
 if __name__ == "__main__":
 
     print("Python NRF24 Simple Receiver Example.")
@@ -47,53 +41,21 @@ if __name__ == "__main__":
         print("Not connected to Raspberry Pi ... goodbye.")
         sys.exit()
 
-    # Create NRF24 object.
-    # PLEASE NOTE: PA level is set to MIN, because test sender/receivers are often close to each other, and then MIN works better.
     nrf = NRF24(pi, ce=24, payload_size=RF24_PAYLOAD.MAX, channel=100,
                 data_rate=RF24_DATA_RATE.RATE_250KBPS, pa_level=RF24_PA.MAX)
     nrf.set_address_bytes(len(address))
-
-    # Listen on the address specified as parameter
     nrf.open_reading_pipe(RF24_RX_ADDR.P1, address)
+    # nrf.show_registers()
 
-    # Display the content of NRF24L01 device registers.
-    nrf.show_registers()
-
-    # Enter a loop receiving data on the address specified.
     try:
         print(f'Receive from {address}')
         count = 0
         while True:
-
-            # As long as data is ready for processing, process it.
             while nrf.data_ready():
-                # Count message and record time of reception.
-                count += 1
-                now = datetime.now()
-
-                # Read pipe and payload for message.
                 pipe = nrf.data_pipe()
                 payload = nrf.get_payload()
 
-                # Resolve protocol number.
-                protocol = payload[0] if len(payload) > 0 else -1
-
-                hex = ':'.join(f'{i:02x}' for i in payload)
-                decoded=[]
-                for v in payload:
-                    decoded.append(v)
-                decoded = "".join(chr(l) for l in decoded)
-
-                # Show message received as hex.
-                #print(f"{now:%Y-%m-%d %H:%M:%S.%f}: pipe: {pipe}, len: {len(payload)}, bytes: {hex}, count: {count}")
-                print(decoded)
-
-                # If the length of the message is 9 bytes and the first byte is 0x01, then we try to interpret the bytes
-                # sent as an example message holding a temperature and humidity sent from the "simple-sender.py" program.
-                if len(payload) == 9 and payload[0] == 0x01:
-                    values = struct.unpack("<Bff", payload)
-                    print(
-                        f'Protocol: {values[0]}, temperature: {values[1]}, humidity: {values[2]}')
+                WeatherStation.Deserialize(payload)
 
             time.sleep(0.01)
     except:
