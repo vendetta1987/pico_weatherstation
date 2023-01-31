@@ -1,0 +1,5 @@
+pi pico:
+https://github.com/micropython/micropython-lib/blob/a5ef231e7d854bab0e6db95f1676173e2281ee3b/micropython/drivers/radio/nrf24l01/nrf24l01.py
+
+pi 4:
+https://github.com/bjarne-hansen/py-nrf24/tree/043cec77342c85c246381c34e6b9a8a3b13868a9
