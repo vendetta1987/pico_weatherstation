@@ -14,51 +14,55 @@ if __name__ == "__main__":
     print("Python NRF24 Simple Receiver Example.")
 
     # Parse command line argument.
-    parser = argparse.ArgumentParser(
+    arg_parser = argparse.ArgumentParser(
         prog="simple-receiver.py", description="Simple NRF24 Receiver Example.")
-    parser.add_argument('-n', '--hostname', type=str, default='localhost',
-                        help="Hostname for the Raspberry running the pigpio daemon.")
-    parser.add_argument('-p', '--port', type=int, default=8888,
-                        help="Port number of the pigpio daemon.")
-    parser.add_argument('address', type=str, nargs='?', default='1SNSR',
-                        help="Address to listen to (3 to 5 ASCII characters)")
+    arg_parser.add_argument('-n', '--hostname', type=str, default='localhost',
+                            help="Hostname for the Raspberry running the pigpio daemon.")
+    arg_parser.add_argument('-p', '--port', type=int, default=8888,
+                            help="Port number of the pigpio daemon.")
+    arg_parser.add_argument('address', type=str, nargs='?', default='WWWWW',
+                            help="Address to listen to (3 to 5 ASCII characters)")
 
-    args = parser.parse_args()
+    args = arg_parser.parse_args()
     hostname = args.hostname
     port = args.port
-    address = args.address
+    nrf_address = args.address
 
     # Verify that address is between 3 and 5 characters.
-    if not (2 < len(address) < 6):
+    if not (2 < len(nrf_address) < 6):
         print(
-            f'Invalid address {address}. Addresses must be between 3 and 5 ASCII characters.')
+            f'Invalid address {nrf_address}. Addresses must be between 3 and 5 ASCII characters.')
         sys.exit(1)
 
     # Connect to pigpiod
     print(f'Connecting to GPIO daemon on {hostname}:{port} ...')
-    pi = pigpio.pi(hostname, port)
-    if not pi.connected:
+    pi_gpio_d = pigpio.pi(hostname, port)
+    if not pi_gpio_d.connected:
         print("Not connected to Raspberry Pi ... goodbye.")
         sys.exit()
 
-    nrf = NRF24(pi, ce=24, payload_size=RF24_PAYLOAD.MAX, channel=100,
+    nrf = NRF24(pi_gpio_d, ce=24, payload_size=RF24_PAYLOAD.MAX, channel=100,
                 data_rate=RF24_DATA_RATE.RATE_250KBPS, pa_level=RF24_PA.MAX)
-    nrf.set_address_bytes(len(address))
-    nrf.open_reading_pipe(RF24_RX_ADDR.P1, address)
+    nrf.set_address_bytes(len(nrf_address))
+    nrf.open_reading_pipe(RF24_RX_ADDR.P1, nrf_address)
     # nrf.show_registers()
 
+    ws = WeatherStation()
+
     try:
-        print(f'Receive from {address}')
+        print(f'Receive from {nrf_address}')
         count = 0
         while True:
             while nrf.data_ready():
-                pipe = nrf.data_pipe()
                 payload = nrf.get_payload()
 
-                WeatherStation.Deserialize(payload)
+                print(f"cnt={struct.unpack('i', payload[:4])}")
+                ws.Deserialize(payload[4:])
 
-            time.sleep(0.01)
+                print(f"temperature={ws.Temperature} humidity={ws.Humidity}")
+
+            time.sleep(0.001)
     except:
         traceback.print_exc()
         nrf.power_down()
-        pi.stop()
+        pi_gpio_d.stop()
