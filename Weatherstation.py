@@ -1,18 +1,28 @@
-import random
 import struct
 
 
 class WeatherStation:
+    _temperature: float
+    _humidity: float
+
     def __init__(self):
         pass
 
     @property
     def Temperature(self) -> float:
-        return random.randrange(-150, 400)/10
+        return self._temperature
+
+    @Temperature.setter
+    def Temperature(self, val: float):
+        self._temperature = val
 
     @property
     def Humidity(self) -> float:
-        return random.randrange(0, 1000)/10
+        return self._humidity
+
+    @Humidity.setter
+    def Humidity(self, val: float):
+        self._humidity = val
 
     def Serialize(self) -> bytes:
         tmp = []
@@ -26,17 +36,24 @@ class WeatherStation:
         # print(f"serialized {len(bin)} bytes")
         return bin
 
-    @staticmethod
-    def Deserialize(bin: bytes):
+    def Deserialize(self, bin: bytes):
         for msg in bin.split(b";"):
-            t = chr(msg[0])
+            if len(msg) > 0:
+                t = chr(msg[0])
 
-            if t == "X":
-                break
+                if t == "X":
+                    break
 
-            val = struct.unpack("f", msg[1:])[0]
+                try:
+                    val = struct.unpack("f", msg[1:])[0]
 
-            if t == "H":
-                print(f"humidity = {val}")
-            elif t == "T":
-                print(f"temperature = {val}")
+                    if t == "H":
+                        self.Humidity = val
+                    elif t == "T":
+                        self.Temperature = val
+                    else:
+                        pass
+                except:
+                    msg = msg[1:]
+                    print(
+                        f"error unpacking {t} with length {len(msg)} -> {msg}")
