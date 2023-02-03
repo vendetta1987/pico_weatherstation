@@ -5,6 +5,7 @@
 # SPDX-FileCopyrightText: 2022 Bill Van Leeuwen for Adafruit Industries
 #
 # SPDX-License-Identifier: MIT
+#https://github.com/adafruit/Adafruit_CircuitPython_BMP280/blob/9c9721c21f6bff5d8e97d7ea24c9a0605f47263c/adafruit_bmp280.py
 
 """
 `adafruit_bmp280`
@@ -125,7 +126,7 @@ _BMP280_STANDBY_TCS = (
 )
 
 
-class Adafruit_BMP280:  # pylint: disable=invalid-name
+class Adafruit_BMP280:
     """Base BMP280 object. Use :class:`Adafruit_BMP280_I2C` or :class:`Adafruit_BMP280_SPI`
     instead of this. This checks the BMP280 was found, reads the coefficients and
     enables the sensor for continuous reads
