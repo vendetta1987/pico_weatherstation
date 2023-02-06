@@ -1,31 +1,31 @@
+import utime
+from adafruit_bme280.basic import Adafruit_BME280, SPI_Impl
 from machine import SPI, Pin
-from adafruit_bmp280 import Adafruit_BMP280
 
-class MyBMP(Adafruit_BMP280):
+
+class PicoSPI_Impl(SPI_Impl):
     def __init__(self, spi: SPI, cs: Pin) -> None:
         self._spi = spi
-        self._cs=cs
-        super().__init__()
+        self._cs = cs
 
-    def _read_register(self, register: int, length: int) -> bytearray:
-        """Low level register reading over SPI, returns a list of values"""
+    def read_register(self, register: int, length: int) -> bytearray:
+        "Read from the device register."
         register = (register | 0x80) & 0xFF  # Read single, bit 7 high.
-        self._cs.high()
-        # pylint: disable=no-member
-        self._spi.write(bytearray([register]))
-        result = bytearray(length)
-        self._spi.readinto(result)
-        # print("$%02X => %s" % (register, [hex(i) for i in result]))
         self._cs.low()
+        self._spi.write(bytearray([register]))  # pylint: disable=no-member
+        result = bytearray(length)
+        self._spi.readinto(result)  # pylint: disable=no-member
+        self._cs.high()
+        # print("$%02X => %s" % (register, [hex(i) for i in result]))
         return result
 
-    def _write_register_byte(self, register: int, value: int) -> None:
-        """Low level register writing over SPI, writes one 8-bit value"""
+    def write_register_byte(self, register: int, value: int) -> None:
+        "Write value to the device register."
         register &= 0x7F  # Write, bit 7 low.
-        self._cs.high()
-        # pylint: disable=no-member
-        self._spi.write(bytes([register, value & 0xFF]))
         self._cs.low()
+        self._spi.write(bytes([register, value & 0xFF]))
+        self._cs.high()
+
 
 if __name__ == "__main__":
     # SCL -> SCK
@@ -35,5 +35,10 @@ if __name__ == "__main__":
     spi = SPI(1, sck=Pin(14), mosi=Pin(15), miso=Pin(12))
     csn = Pin(13, mode=Pin.OUT)
 
-    bmp = Adafruit_BMP280_SPI(spi, csn)
-    print(bmp.temperature)
+    spi_impl = PicoSPI_Impl(spi, csn)
+    bme = Adafruit_BME280(spi_impl)
+
+    bme.sea_level_pressure = 1042
+    while True:
+        print(f"t={bme.temperature} h={bme.humidity} h rel={bme.relative_humidity} p={bme.pressure} alt={bme.altitude}")
+        utime.sleep_ms(100)

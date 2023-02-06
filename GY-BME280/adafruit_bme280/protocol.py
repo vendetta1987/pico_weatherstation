@@ -3,8 +3,11 @@
 # SPDX-License-Identifier: MIT
 "Provides the protocol objects for I2C and SPI"
 
-from busio import I2C, SPI
-from digitalio import DigitalInOut
+try:
+    from busio import I2C, SPI
+    from digitalio import DigitalInOut
+except ImportError:
+    pass
 
 
 class I2C_Impl:
@@ -40,9 +43,6 @@ class SPI_Impl:
         cs: DigitalInOut,  # pylint: disable=invalid-name
         baudrate: int = 100000,
     ) -> None:
-        from adafruit_bus_device import (  # pylint: disable=import-outside-toplevel
-            spi_device,
-        )
 
         self._spi = spi_device.SPIDevice(spi, cs, baudrate=baudrate)
 
