@@ -3,7 +3,6 @@ import struct
 import sys
 import time
 import traceback
-from datetime import datetime
 from Weatherstation import WeatherStation
 
 import pigpio

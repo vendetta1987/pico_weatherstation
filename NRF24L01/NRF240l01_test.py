@@ -14,7 +14,7 @@ class NRFManager:
 
     def __init__(self):
         self.spi = SPI(0, sck=Pin(2), mosi=Pin(3), miso=Pin(4))
-        self.cfg = {"spi": self.spi, "csn": 5, "ce": 6}
+        self.cfg = {"spi": self.spi, "csn": 0, "ce": 6}
 
         self.csn = Pin(self.cfg["csn"], mode=Pin.OUT)
         self.ce = Pin(self.cfg["ce"], mode=Pin.OUT)
