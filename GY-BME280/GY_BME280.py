@@ -32,8 +32,8 @@ if __name__ == "__main__":
     # SDO -> MISO/RX
     # SDA -> MOSI/TX
     # CSB -> CSn
-    spi = SPI(1, sck=Pin(14), mosi=Pin(15), miso=Pin(12))
-    csn = Pin(13, mode=Pin.OUT)
+    spi = SPI(0, sck=Pin(2), mosi=Pin(3), miso=Pin(4))
+    csn = Pin(1, mode=Pin.OUT)
 
     spi_impl = PicoSPI_Impl(spi, csn)
     bme = Adafruit_BME280(spi_impl)
