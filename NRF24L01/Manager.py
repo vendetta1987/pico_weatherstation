@@ -30,9 +30,3 @@ class NRFManager:
             self.nrf.send_start(data)
         except:
             print(f"error sending {data}")
-            return
-
-        wait_cnt = 0
-        while (self.nrf.send_done() is None) and (wait_cnt < 100):
-            wait_cnt = wait_cnt+1
-            utime.sleep_us(10)
