@@ -1,6 +1,6 @@
-import utime
-from adafruit_bme280.basic import Adafruit_BME280, SPI_Impl
 from machine import SPI, Pin
+
+from BME280.adafruit_bme280.basic import SPI_Impl
 
 
 class PicoSPI_Impl(SPI_Impl):
@@ -25,20 +25,3 @@ class PicoSPI_Impl(SPI_Impl):
         self._cs.low()
         self._spi.write(bytes([register, value & 0xFF]))
         self._cs.high()
-
-
-if __name__ == "__main__":
-    # SCL -> SCK
-    # SDO -> MISO/RX
-    # SDA -> MOSI/TX
-    # CSB -> CSn
-    spi = SPI(0, sck=Pin(2), mosi=Pin(3), miso=Pin(4))
-    csn = Pin(1, mode=Pin.OUT)
-
-    spi_impl = PicoSPI_Impl(spi, csn)
-    bme = Adafruit_BME280(spi_impl)
-
-    bme.sea_level_pressure = 1042
-    while True:
-        print(f"t={bme.temperature} h={bme.humidity} h rel={bme.relative_humidity} p={bme.pressure} alt={bme.altitude}")
-        utime.sleep_ms(100)

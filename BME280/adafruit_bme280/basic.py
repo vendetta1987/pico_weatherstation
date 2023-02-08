@@ -34,7 +34,7 @@ import struct
 from time import sleep
 
 from micropython import const
-from adafruit_bme280.protocol import I2C_Impl, SPI_Impl
+from BME280.adafruit_bme280.protocol import I2C_Impl, SPI_Impl
 
 try:
     import typing  # pylint: disable=unused-import
