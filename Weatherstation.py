@@ -1,16 +1,30 @@
 import struct
 
+try:
+    from BME280.Manager import BMEManager
+except:
+    bme_available = False
+else:
+    bme_available = True
+
 
 class WeatherStation:
     _temperature: float
     _humidity: float
+    _pressure: float
 
     def __init__(self):
-        pass
+        if bme_available:
+            self.bme_mngr = BMEManager()
+        else:
+            self.bme_mngr = None
 
     @property
     def Temperature(self) -> float:
-        return self._temperature
+        if bme_available:
+            return self.bme_mngr.sensor.temperature
+        else:
+            return self._temperature
 
     @Temperature.setter
     def Temperature(self, val: float):
@@ -18,11 +32,25 @@ class WeatherStation:
 
     @property
     def Humidity(self) -> float:
-        return self._humidity
+        if bme_available:
+            return self.bme_mngr.sensor.humidity
+        else:
+            return self._humidity
 
     @Humidity.setter
     def Humidity(self, val: float):
         self._humidity = val
+
+    @property
+    def Pressure(self) -> float:
+        if bme_available:
+            return self.bme_mngr.sensor.pressure
+        else:
+            return self._pressure
+
+    @Pressure.setter
+    def Pressure(self, val: float):
+        self._pressure = val
 
     def Serialize(self) -> bytes:
         tmp = []
@@ -30,6 +58,8 @@ class WeatherStation:
         tmp.append(struct.pack("f", self.Temperature))  # 4
         tmp.append(b";H")  # 2
         tmp.append(struct.pack("f", self.Humidity))  # 4
+        tmp.append(b";P")  # 2
+        tmp.append(struct.pack("f", self.Pressure))  # 4
         tmp.append(b";X")  # 2
 
         bin = bytes().join(tmp)
@@ -51,6 +81,8 @@ class WeatherStation:
                         self.Humidity = val
                     elif t == "T":
                         self.Temperature = val
+                    elif t == "P":
+                        self.Pressure = val
                     else:
                         pass
                 except:
