@@ -55,10 +55,12 @@ if __name__ == "__main__":
             while nrf.data_ready():
                 payload = nrf.get_payload()
 
-                print(f"cnt={struct.unpack('i', payload[:4])}")
-                ws.Deserialize(payload[4:])
+                # print(f"cnt={struct.unpack('i', payload[:4])}")
+                # ws.Deserialize(payload[4:])
 
-                print(f"temperature={ws.Temperature} humidity={ws.Humidity}")
+                ws.Deserialize(payload)
+
+                print(f"T={ws.Temperature:.2f}\tH={ws.Humidity:.2f}\tP={ws.Pressure:.2f}")
 
             time.sleep(0.001)
     except:
