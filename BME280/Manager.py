@@ -15,4 +15,4 @@ class BMEManager():
         csn = Pin(1, mode=Pin.OUT)
 
         spi_impl = PicoSPI_Impl(spi, csn)
-        self.bme = Adafruit_BME280(spi_impl)
+        self.sensor = Adafruit_BME280(spi_impl)
