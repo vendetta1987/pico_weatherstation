@@ -10,9 +10,11 @@ class BMEManager():
     # SDA -> MOSI/TX
     # CSB -> CSn
 
+    sensor: Adafruit_BME280
+
     def __init__(self):
         spi = SPI(0, sck=Pin(2), mosi=Pin(3), miso=Pin(4))
         csn = Pin(1, mode=Pin.OUT)
-
         spi_impl = PicoSPI_Impl(spi, csn)
+
         self.sensor = Adafruit_BME280(spi_impl)

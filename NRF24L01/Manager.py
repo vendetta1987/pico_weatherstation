@@ -9,6 +9,10 @@ class NRFManager:
     # hex(ord("W"))
     # hex(ord("w"))
     addresses = (b"\x57\x57\x57\x57\x57", b"\x77\x77\x77\x77\x77")
+    spi:SPI
+    csn:Pin
+    ce:Pin
+    nrf:NRF24L01
 
     def __init__(self):
         self.spi = SPI(0, sck=Pin(2), mosi=Pin(3), miso=Pin(4))
