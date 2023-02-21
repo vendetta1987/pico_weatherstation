@@ -27,12 +27,15 @@ def ReadTriggers():
         print(f"wind speed={speed_kmh} mm of rain={rain_mm}")
 
 
-def ReadADC():
+def ReadWindVane():
     wv = WindVane(26)
-    wv.StartMeasurements()
+
+    while True:
+        print(wv.GetWindDirection())
+        utime.sleep_ms(500)
 
 
 if __name__ == "__main__":
     # SendSensorReadingsByNRF()
     # ReadTriggers()
-    ReadADC()
+    ReadWindVane()
