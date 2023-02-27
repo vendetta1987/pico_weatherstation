@@ -1,6 +1,9 @@
-import onewire
+import time
+from math import nan
+
 from ds18x20 import DS18X20
 from machine import Pin
+from onewire import OneWire
 
 
 class DS18B20Manager:
@@ -8,14 +11,14 @@ class DS18B20Manager:
     _devices: list
 
     def __init__(self, pin: int):
-        _pin = Pin(pin, Pin.IN, Pin.PULL_UP)
-        ow = onewire.OneWire(_pin)
-        self._sensor = DS18X20(ow)
+        _pin = Pin(pin, Pin.IN)
+        self._sensor = DS18X20(OneWire(_pin))
         self._devices = self._sensor.scan()
-        print(f"devices={self._devices}")
 
     def GetTemperature(self) -> float:
-        for device in self._devices:
-            print(f"device {device}={self._sensor.read_temp(device)}")
-
-        return 0.0
+        if len(self._devices) > 0:
+            self._sensor.convert_temp()
+            time.sleep_ms(750)
+            return self._sensor.read_temp(self._devices[0])
+        else:
+            return nan
