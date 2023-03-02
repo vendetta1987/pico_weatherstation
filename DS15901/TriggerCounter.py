@@ -15,7 +15,8 @@ class TriggerCounter:
         self._pin.irq(handler=self._callback, trigger=Pin.IRQ_RISING)
         self._start_measure_time = time.ticks_ms()
 
-    def ReadAndResetValue(self):
+    @property
+    def EvaluatedCount(self):
         tmp_count = self._trigger_count
         self._trigger_count = 0
 

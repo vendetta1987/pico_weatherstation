@@ -9,8 +9,8 @@ def ReadTriggers():
     rain_gauge = TriggerCounter(0.2794, 14)
     while True:
         utime.sleep(3)
-        speed_kmh = anemometer.ReadAndResetValue()
-        rain_mm = rain_gauge.ReadAndResetValue()
+        speed_kmh = anemometer.EvaluatedCount
+        rain_mm = rain_gauge.EvaluatedCount
         print(f"wind speed={speed_kmh} mm of rain={rain_mm}")
 
 
@@ -18,7 +18,7 @@ def ReadWindVane():
     wv = WindVane(26)
 
     while True:
-        print(wv.GetWindDirection())
+        print(wv.Direction)
         utime.sleep_ms(500)
 
 

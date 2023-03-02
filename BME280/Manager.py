@@ -10,11 +10,23 @@ class BMEManager():
     # SDA -> MOSI/TX
     # CSB -> CSn
 
-    sensor: Adafruit_BME280
+    _sensor: Adafruit_BME280
 
-    def __init__(self):
-        spi = SPI(0, sck=Pin(2), mosi=Pin(3), miso=Pin(4))
-        csn = Pin(1, mode=Pin.OUT)
-        spi_impl = PicoSPI_Impl(spi, csn)
+    def __init__(self, spi: int, sck: int, mosi: int, miso: int, csn: int):
+        _spi = SPI(spi, sck=Pin(sck), mosi=Pin(mosi), miso=Pin(miso))
+        csnPin = Pin(1, mode=Pin.OUT)
+        spi_impl = PicoSPI_Impl(_spi, csnPin)
 
-        self.sensor = Adafruit_BME280(spi_impl)
+        self._sensor = Adafruit_BME280(spi_impl)
+
+    @property
+    def Temperature(self) -> float:
+        return self._sensor.temperature
+
+    @property
+    def Humidity(self) -> float:
+        return self._sensor.humidity
+
+    @property
+    def Pressure(self) -> float:
+        return self._sensor.pressure

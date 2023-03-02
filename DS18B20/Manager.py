@@ -15,7 +15,8 @@ class DS18B20Manager:
         self._sensor = DS18X20(OneWire(_pin))
         self._devices = self._sensor.scan()
 
-    def GetTemperature(self) -> float:
+    @property
+    def Temperature(self) -> float:
         if len(self._devices) > 0:
             self._sensor.convert_temp()
             time.sleep_ms(750)

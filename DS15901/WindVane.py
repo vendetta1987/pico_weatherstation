@@ -40,14 +40,15 @@ LIMITS = (
 
 
 class WindVane:
-    _adc: ADC
+    _sensor: ADC
     _direction_count: int = 16
 
     def __init__(self, pin: int):
-        self._adc = ADC(pin)
+        self._sensor = ADC(pin)
 
-    def GetWindDirection(self) -> str:
-        adc_value = self._adc.read_u16()
+    @property
+    def Direction(self) -> str:
+        adc_value = self._sensor.read_u16()
 
         for idx in range(self._direction_count):
             if adc_value < LIMITS[idx]:
