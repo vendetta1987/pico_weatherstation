@@ -153,66 +153,69 @@ class WeatherStation:
     def Rain(self, val: float):
         self._rain = val
 
-    def Serialize(self) -> bytes:
+    def Serialize(self) -> list[bytes]:
+        packets = []
+
+        tmp = []  # byte size of this line, summed up size in tmp
+        tmp.append(b"T:")  # 2, 2
+        tmp.append(struct.pack("f", self.Temperature))  # 4, 6
+        tmp.append(b";H:")  # 3, 9
+        tmp.append(struct.pack("f", self.Humidity))  # 4, 13
+        tmp.append(b";P:")  # 3, 16
+        tmp.append(struct.pack("f", self.Pressure))  # 4, 20
+        tmp.append(b";SM:")  # 4, 24
+        tmp.append(struct.pack("f", self.SoilMoisture))  # 4, 28
+
+        packets.append(bytes().join(tmp))
+
         tmp = []
-        tmp.append(b"T")  # 1
-        tmp.append(struct.pack("f", self.Temperature))  # 4
-        tmp.append(b";H")  # 2
-        tmp.append(struct.pack("f", self.Humidity))  # 4
-        tmp.append(b";P")  # 2
-        tmp.append(struct.pack("f", self.Pressure))  # 4
+        tmp.append(b"ST:")  # 3, 3
+        tmp.append(struct.pack("f", self.SoilTemperature))  # 4, 7
+        tmp.append(b";WD:")  # 4, 11
+        tmp.append(bytes(self.WindDirection, "ascii"))  # 1-3, 14
+        tmp.append(b";WS:")  # 4, 18
+        tmp.append(struct.pack("f", self.WindSpeed))  # 4, 22
+        tmp.append(b";R:")  # 3, 25
+        tmp.append(struct.pack("f", self.Rain))  # 4, 29
 
-        # TODO: two letter properties?
-        # tmp.append(b";SM")  # 3
-        # tmp.append(struct.pack("f", self.SoilMoisture))  # 4
-        # tmp.append(b";ST")  # 3
-        # tmp.append(struct.pack("f", self.SoilTemperature))  # 4
+        packets.append(bytes().join(tmp))
 
-        # TODO: string property?
-        # tmp.append(b";WD")  # 3
-        # tmp.append(struct.pack("f", self.WindDirection))  # 4
-        # tmp.append(b";WS")  # 3
-        # tmp.append(struct.pack("f", self.WindSpeed))  # 4
+        length = 0
+        for p in packets:
+            length += len(p)
 
-        # tmp.append(b";R")  # 2
-        # tmp.append(struct.pack("f", self.Rain))  # 4
+        print(f"serialized {length} bytes")
+        return packets
 
-        tmp.append(b";X")  # 2
-
-        bin = bytes().join(tmp)
-        print(f"serialized {len(bin)} bytes")
-        return bin
-
-    def Deserialize(self, bin: bytes):
-        for msg in bin.split(b";"):
-            if len(msg) > 0:
-                t = chr(msg[0])
-
-                if t == "X":
-                    break
+    def Deserialize(self, packet: bytes):
+        for entry in packet.split(b";"):
+            if len(entry) > 0:
+                key, value = entry.split(b":")
 
                 try:
-                    val = struct.unpack("f", msg[1:])[0]
+                    if key == b"WD":
+                        value = value.decode("ascii")
+                    else:
+                        value = struct.unpack("f", value)
 
-                    if t == "H":
-                        self.Humidity = val
-                    elif t == "T":
-                        self.Temperature = val
-                    elif t == "P":
-                        self.Pressure = val
-                    elif t == "SM":
-                        self.SoilMoisture = val
-                    elif t == "ST":
-                        self.SoilTemperature = val
-                    elif t == "WD":
-                        self.WindDirection = val
-                    elif t == "WS":
-                        self.WindSpeed = val
-                    elif t == "R":
-                        self.Rain = val
+                    if key == b"H":
+                        self.Humidity = value
+                    elif key == b"T":
+                        self.Temperature = value
+                    elif key == b"P":
+                        self.Pressure = value
+                    elif key == b"SM":
+                        self.SoilMoisture = value
+                    elif key == b"ST":
+                        self.SoilTemperature = value
+                    elif key == "WD":
+                        self.WindDirection = value
+                    elif key == b"WS":
+                        self.WindSpeed = value
+                    elif key == b"R":
+                        self.Rain = value
                     else:
                         pass
                 except:
-                    msg = msg[1:]
                     print(
-                        f"error unpacking {t} with length {len(msg)} -> {msg}")
+                        f"error unpacking {key} with length {len(entry)} -> {entry}")

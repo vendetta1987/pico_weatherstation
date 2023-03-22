@@ -9,9 +9,10 @@ def SendSensorReadingsByNRF():
     nrf_mngr = NRFManager()
 
     while True:
-        data = ws.Serialize()
-        print(f"sending {data}")
-        nrf_mngr.send(data)
+        packets = ws.Serialize()
+        print(f"sending {packets}")
+        for packet in packets:
+            nrf_mngr.send(packet)
         utime.sleep_ms(250)
 
 
