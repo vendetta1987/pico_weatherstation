@@ -45,16 +45,21 @@ class WeatherStation:
             self._bme = BMEManager(0, 2, 3, 4, 1)
         else:
             self._bme = None
+            self._temperature = -1
+            self._humidity = -1
+            self._pressure = -1
 
         if soil_available:
             self._soil_M = SoilMoistureManager(27)
         else:
             self._soil_M = None
+            self._soil_moisture = -1
 
         if ds18_available:
             self._soil_T = DS18B20Manager(13)
         else:
             self._soil_T = None
+            self._soil_temperature = -1
 
         if ds15_available:
             self._wind_vane = WindVane(26)
@@ -64,6 +69,9 @@ class WeatherStation:
             self._wind_vane = None
             self._wind_anemometer = None
             self._rain_gauge = None
+            self._wind_direction = "X"
+            self._wind_speed = -1
+            self._rain = -1
 
     @property
     def Temperature(self) -> float:
@@ -165,6 +173,7 @@ class WeatherStation:
         tmp.append(struct.pack("f", self.Pressure))  # 4, 20
         tmp.append(b";SM:")  # 4, 24
         tmp.append(struct.pack("f", self.SoilMoisture))  # 4, 28
+        tmp.append(b";")  # 1, 25
 
         packets.append(bytes().join(tmp))
 
@@ -177,6 +186,7 @@ class WeatherStation:
         tmp.append(struct.pack("f", self.WindSpeed))  # 4, 22
         tmp.append(b";R:")  # 3, 25
         tmp.append(struct.pack("f", self.Rain))  # 4, 29
+        tmp.append(b";")  # 1, 30
 
         packets.append(bytes().join(tmp))
 
@@ -184,19 +194,19 @@ class WeatherStation:
         for p in packets:
             length += len(p)
 
-        print(f"serialized {length} bytes")
+        print(f"serialized {length} bytes in {len(packets)} packets")
         return packets
 
     def Deserialize(self, packet: bytes):
         for entry in packet.split(b";"):
-            if len(entry) > 0:
+            if b":" in entry:
                 key, value = entry.split(b":")
 
                 try:
                     if key == b"WD":
                         value = value.decode("ascii")
                     else:
-                        value = struct.unpack("f", value)
+                        value = struct.unpack("f", value)[0]
 
                     if key == b"H":
                         self.Humidity = value
