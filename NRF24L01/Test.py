@@ -26,12 +26,12 @@ if __name__ == "__main__":
             ws.Temperature = GetPicoTemperature()
             ws.Humidity = random.randrange(0, 1000)/10
 
-            bin = ws.Serialize()
-            bin = struct.pack("i", cnt)+bin
+            packets = ws.Serialize()
+            packets[0] = struct.pack("i", cnt)+packets[0]
 
             print(
-                f"sending {cnt}: t={ws.Temperature}, h={ws.Humidity} -> {str(bin)}")
-            nrf_mngr.send(bin)
+                f"sending {cnt}: t={ws.Temperature}, h={ws.Humidity} -> {str(packets[0])}")
+            nrf_mngr.send(packets[0])
         except:
             print(f"error at {cnt}")
 
