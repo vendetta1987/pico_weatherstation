@@ -13,6 +13,7 @@ def SendSensorReadingsByNRF():
         print(f"sending {packets}")
         for packet in packets:
             nrf_mngr.send(packet)
+            utime.sleep_ms(10)
         utime.sleep_ms(250)
 
 
