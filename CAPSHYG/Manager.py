@@ -12,6 +12,10 @@ class SoilMoistureManager:
     @property
     def Moisture(self) -> float:
         raw = self._sensor.read_u16()
-        #print(f"raw={raw}")
+        # print(f"raw={raw}")
         raw = raw/65536*3.3
-        return ((1.0/raw)*self._slope)+self._intercept
+
+        if raw > 0:
+            return ((1.0/raw)*self._slope)+self._intercept
+        else:
+            return -1
