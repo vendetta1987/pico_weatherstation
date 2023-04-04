@@ -162,33 +162,36 @@ class WeatherStation:
         self._rain = val
 
     def Serialize(self) -> list[bytes]:
+        packed_structs = []
+        # !  network byte order
+        # B  number of bytes denoting the type
+        # ns n digits as an array/string
+        # B  number of bytes denoting the value
+        # f  a float value
+        packed_structs.append(struct.pack(
+            "!B1sBf", 1, b"T", 4, self.Temperature))
+        packed_structs.append(struct.pack("!B1sBf", 1, b"H", 4, self.Humidity))
+        packed_structs.append(struct.pack("!B1sBf", 1, b"P", 4, self.Pressure))
+        packed_structs.append(struct.pack(
+            "!B2sBf", 2, b"SM", 4, self.SoilMoisture))
+        packed_structs.append(struct.pack(
+            "!B2sBf", 2, b"ST", 4, self.SoilTemperature))
+        packed_structs.append(struct.pack("!B2sB3s", 2, b"WD", 3,
+                                          self.WindDirection.encode("ascii")))
+        packed_structs.append(struct.pack(
+            "!B2sBf", 2, b"WS", 4, self.WindSpeed))
+        packed_structs.append(struct.pack("!B1sBf", 1, b"R", 4, self.Rain))
+
         packets = []
-
-        tmp = []  # byte size of this line, summed up size in tmp
-        tmp.append(b"T:")  # 2, 2
-        tmp.append(struct.pack("f", self.Temperature))  # 4, 6
-        tmp.append(b";H:")  # 3, 9
-        tmp.append(struct.pack("f", self.Humidity))  # 4, 13
-        tmp.append(b";P:")  # 3, 16
-        tmp.append(struct.pack("f", self.Pressure))  # 4, 20
-        tmp.append(b";SM:")  # 4, 24
-        tmp.append(struct.pack("f", self.SoilMoisture))  # 4, 28
-        tmp.append(b";")  # 1, 25
-
-        packets.append(bytes().join(tmp))
-
-        tmp = []
-        tmp.append(b"ST:")  # 3, 3
-        tmp.append(struct.pack("f", self.SoilTemperature))  # 4, 7
-        tmp.append(b";WD:")  # 4, 11
-        tmp.append(bytes(self.WindDirection, "ascii"))  # 1-3, 14
-        tmp.append(b";WS:")  # 4, 18
-        tmp.append(struct.pack("f", self.WindSpeed))  # 4, 22
-        tmp.append(b";R:")  # 3, 25
-        tmp.append(struct.pack("f", self.Rain))  # 4, 29
-        tmp.append(b";")  # 1, 30
-
-        packets.append(bytes().join(tmp))
+        idx = 0
+        struct_cnt = len(packed_structs)
+        while idx < struct_cnt:
+            packet = bytes()
+            while (idx < struct_cnt) and ((len(packed_structs[idx])+len(packet)) < 31):
+                packet = bytes().join([packet, packed_structs[idx]])
+                idx += 1
+            packet = bytes().join([struct.pack("!B", len(packet)), packet])
+            packets.append(packet)
 
         length = 0
         for p in packets:
@@ -198,34 +201,53 @@ class WeatherStation:
         return packets
 
     def Deserialize(self, packet: bytes):
-        for entry in packet.split(b";"):
-            if b":" in entry:
-                key, value = entry.split(b":")
+        packet_byte_cnt = struct.unpack("!B", packet[:1])[0]
+        packet = packet[1:]
+        consumed_cnt = 0
+        while consumed_cnt < packet_byte_cnt:
+            type_byte_cnt = struct.unpack("!B", packet[:1])[0]
+            packet = packet[1:]
+            consumed_cnt += 1
 
-                try:
-                    if key == b"WD":
-                        value = value.decode("ascii")
-                    else:
-                        value = struct.unpack("f", value)[0]
+            property_type = struct.unpack(
+                f"!{type_byte_cnt}s", packet[:type_byte_cnt])[0]
+            packet = packet[type_byte_cnt:]
+            consumed_cnt += type_byte_cnt
 
-                    if key == b"H":
-                        self.Humidity = value
-                    elif key == b"T":
-                        self.Temperature = value
-                    elif key == b"P":
-                        self.Pressure = value
-                    elif key == b"SM":
-                        self.SoilMoisture = value
-                    elif key == b"ST":
-                        self.SoilTemperature = value
-                    elif key == "WD":
-                        self.WindDirection = value
-                    elif key == b"WS":
-                        self.WindSpeed = value
-                    elif key == b"R":
-                        self.Rain = value
-                    else:
-                        pass
-                except:
-                    print(
-                        f"error unpacking {key} with length {len(entry)} -> {entry}")
+            value_byte_cnt = struct.unpack("!B", packet[:1])[0]
+            packet = packet[1:]
+            consumed_cnt += 1
+
+            if value_byte_cnt == 4:
+                value = struct.unpack("!f", packet[:value_byte_cnt])[0]
+            else:
+                value = struct.unpack(
+                    f"!{value_byte_cnt}s", packet[:value_byte_cnt])[0]
+
+            packet = packet[value_byte_cnt:]
+            consumed_cnt += value_byte_cnt
+
+            if property_type == b"H":
+                self.Humidity = value
+            elif property_type == b"T":
+                self.Temperature = value
+            elif property_type == b"P":
+                self.Pressure = value
+            elif property_type == b"SM":
+                self.SoilMoisture = value
+            elif property_type == b"ST":
+                self.SoilTemperature = value
+            elif property_type == "WD":
+                self.WindDirection = value
+            elif property_type == b"WS":
+                self.WindSpeed = value
+            elif property_type == b"R":
+                self.Rain = value
+            else:
+                pass
+
+
+if __name__ == "__main__":
+    ws = WeatherStation()
+    packets = ws.Serialize()
+    ws.Deserialize(packets[0])
