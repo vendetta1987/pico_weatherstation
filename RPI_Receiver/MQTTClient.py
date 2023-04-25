@@ -47,5 +47,9 @@ class MQTTCLient:
         print("connected to MQTT broker")
         self.is_connected = rc == 0
 
+        if self.is_connected:
+            self._client.will_set(
+                f"{self._TOPIC}/status", "disconnected unexpectedly")
+
     def _OnMessage(self, client, userdata, msg):
         print(msg.topic+" "+str(msg.payload))
