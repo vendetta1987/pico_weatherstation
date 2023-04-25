@@ -28,4 +28,4 @@ class TriggerCounter:
         return calculated_value
 
     def _callback(self, pin: Pin):
-        self._trigger_count = self._trigger_count+1
+        self._trigger_count += 1
