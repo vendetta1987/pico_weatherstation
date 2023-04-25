@@ -19,11 +19,11 @@ if __name__ == "__main__":
                             help="Hostname for the Raspberry running the pigpio daemon.")
     arg_parser.add_argument('-p', '--port', type=int, default=8888,
                             help="Port number of the pigpio daemon.")
-    arg_parser.add_argument('address', type=str, nargs='?', default='WWWWW',
+    arg_parser.add_argument('--address', type=str, nargs='?', default='WWWWW',
                             help="Address to listen to (3 to 5 ASCII characters)")
-    arg_parser.add_argument('ce', type=str, nargs='?', default=23,
+    arg_parser.add_argument('-ce', type=int, nargs='?', default=23,
                             help="chip enbale pin")
-    arg_parser.add_argument('channel', type=str, nargs='?', default=100,
+    arg_parser.add_argument('--channel', type=int, nargs='?', default=100,
                             help="NRF channel")
 
     args = arg_parser.parse_args()
@@ -33,8 +33,8 @@ if __name__ == "__main__":
     ce_pin = args.ce
     nrf_channel = args.channel
 
-    client = MQTTCLient()
-    client.Connect()
+    mqtt_client = MQTTCLient()
+    mqtt_client.Connect()
 
     # Verify that address is between 3 and 5 characters.
     if not (2 < len(nrf_address) < 6):
@@ -61,32 +61,37 @@ if __name__ == "__main__":
         while True:
             while nrf.data_ready():
                 payload = nrf.get_payload()
-                print(payload)
+                # print(payload)
                 ws.Deserialize(payload)
+
                 print(f"T={ws.Temperature:.2f}\tH={ws.Humidity:.2f}\t\
                       P={ws.Pressure:.2f}\tSM={ws.SoilMoisture:.2f}\t\
                       ST={ws.SoilTemperature:.2f}\tWD={ws.WindDirection}\t\
                       WS={ws.WindSpeed:.2f}\tR={ws.Rain:.2f}")
 
-                client.Publish("temperature", ws.Temperature)
-                client.Publish("humidity", ws.Humidity)
-                client.Publish("pressure", ws.Pressure)
-                client.Publish("rain", ws.Rain)
+                mqtt_client.Publish("temperature", ws.Temperature)
+                mqtt_client.Publish("humidity", ws.Humidity)
+                mqtt_client.Publish("pressure", ws.Pressure)
+                mqtt_client.Publish("rain", ws.Rain)
 
                 soil = {
                     "moisture": ws.SoilMoisture,
                     "temperature": ws.SoilTemperature
                 }
-                client.Publish("soil", json.dumps(soil))
+                mqtt_client.Publish("soil", json.dumps(soil))
 
                 wind = {
                     "direction": ws.WindDirection,
                     "speed": ws.WindSpeed,
                 }
-                client.Publish("wind", json.dumps(wind))
+                mqtt_client.Publish("wind", json.dumps(wind))
 
-            time.sleep(0.001)
+                mqtt_client.Publish("last_update", time.strftime("%c"))
+
+            time.sleep(0.01)
     except:
         traceback.print_exc()
+        print("powering down")
+        mqtt_client.Publish("status", "disconnected")
         nrf.power_down()
         pi_gpio_d.stop()
