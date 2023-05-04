@@ -18,6 +18,7 @@ class BMEManager():
         spi_impl = PicoSPI_Impl(_spi, csnPin)
 
         self._sensor = Adafruit_BME280(spi_impl)
+        self._sensor.sea_level_pressure = 1042
 
     @property
     def Temperature(self) -> float:
