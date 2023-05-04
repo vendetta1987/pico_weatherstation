@@ -63,8 +63,8 @@ class WeatherStation:
 
         if ds15_available:
             self._wind_vane = WindVane(26)
-            self._wind_anemometer = TriggerCounter(2.4, 15)
-            self._rain_gauge = TriggerCounter(0.2794, 14)
+            self._wind_anemometer = TriggerCounter(2.4, 22)
+            self._rain_gauge = TriggerCounter(0.2794, 16)
         else:
             self._wind_vane = None
             self._wind_anemometer = None

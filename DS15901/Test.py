@@ -5,8 +5,8 @@ from DS15901.WindVane import WindVane
 
 
 def ReadTriggers():
-    anemometer = TriggerCounter(2.4, 15)
-    rain_gauge = TriggerCounter(0.2794, 14)
+    anemometer = TriggerCounter(2.4, 22)
+    rain_gauge = TriggerCounter(0.2794, 16)
     while True:
         utime.sleep(3)
         speed_kmh = anemometer.EvaluatedCount
