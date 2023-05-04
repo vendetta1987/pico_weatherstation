@@ -6,7 +6,7 @@ from Weatherstation import WeatherStation
 
 def SendSensorReadingsByNRF():
     ws = WeatherStation()
-    nrf_mngr = NRFManager()
+    nrf_mngr = NRFManager(0, 2, 3, 4, 0, 6)
 
     while True:
         packets = ws.Serialize()

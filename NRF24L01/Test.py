@@ -17,7 +17,7 @@ sensor_temp = ADC(4)
 conversion_factor = 3.3 / (65535)
 
 if __name__ == "__main__":
-    nrf_mngr = NRFManager()
+    nrf_mngr = NRFManager(0, 2, 3, 4, 0, 6)
     ws = WeatherStation()
     cnt = 0
 
