@@ -14,8 +14,17 @@ def SendSensorReadingsByNRF():
         for packet in packets:
             nrf_mngr.send(packet)
             utime.sleep_ms(10)
-        utime.sleep_ms(250)
+        utime.sleep_ms(1000*60)
+
+
+def ContinouslyReadSensors():
+    ws = WeatherStation()
+
+    while True:
+        print(f"Temperature={ws.Temperature} Humidity={ws.Humidity} Pressure={ws.Pressure} WindDirection={ws.WindDirection} WindSpeed={ws.WindSpeed} Rain={ws.Rain} SoilTemperature={ws.SoilTemperature} SoilMoisture={ws.SoilMoisture}")
+        utime.sleep_ms(3000)
 
 
 if __name__ == "__main__":
     SendSensorReadingsByNRF()
+    #ContinouslyReadSensors()
