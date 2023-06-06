@@ -10,11 +10,11 @@ def SendSensorReadingsByNRF():
 
     while True:
         packets = ws.Serialize()
-        print(f"sending {packets}")
         for packet in packets:
+            print(f"sending {packet}")
             nrf_mngr.send(packet)
             utime.sleep_ms(10)
-        utime.sleep_ms(1000*60)
+        utime.sleep_ms(250)
 
 
 def ContinouslyReadSensors():
@@ -25,6 +25,18 @@ def ContinouslyReadSensors():
         utime.sleep_ms(3000)
 
 
+def ContinousSendingTest():
+    nrf_mngr = NRFManager(0, 2, 3, 4, 0, 6)
+
+    i = 0
+    while True:
+        print(f"sending.. {i}")
+        i += 1
+        nrf_mngr.send(b"test")
+        utime.sleep_ms(200)
+
+
 if __name__ == "__main__":
-    SendSensorReadingsByNRF()
-    #ContinouslyReadSensors()
+    # SendSensorReadingsByNRF()
+    # ContinouslyReadSensors()
+    # ContinousSendingTest()
