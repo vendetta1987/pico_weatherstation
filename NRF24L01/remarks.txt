@@ -1,0 +1,49 @@
+https://www.arduinoetal.net/?q=node/89
+
+    Hardware Channels:
+    Hardware channels are not the same as "Pipes", which are software 'channels'.
+        The hardware channels are the specific, narrow frequency bands (~1MHz wide) within the broad range of the 2.4GHz band (2.400GHz to 2.525GHz).
+        Hardware frequency channels are selected in your sketch using the nRF24 library function calls.
+        "setChannel(108);" successfully changed channels, as shown by preamble.
+        channel number can be 0-124, to operate on frequencies from 2.400GHz to 2.524GHz.
+        From web: "Usually frequencies above channel 100 are best.
+        HOWEVER: In most countries the allowed frequencies are only from 2.400GHz to 2.483.5GHz.
+        In USA it's best to use channels from 70 to 80."
+        However: Another forum post recommended the opposite, using very low channels, 0 to 5, say.
+        Actual freq MHz = 2400 + channelNum 
+    Pipe addresses:
+        Pipes are called "logical channels" in the data sheet. They constitute the (software) conduit/path through which data is sent from one nRF24 module to another.
+        OTOH perhaps a more intuitive way to look at them is to consider them to be "tags." In fact there's only one channel/path, and that's the hardware channel, and all communication comes through that channel. But each packet that comes through will be tagged with an address (pipe address), so that the receiver can determine whether it should pay attention to a given packet or not (ie. has that "pipe" been opened for reading?)
+        Each pipe has a unique address, of the form 0xF0F0F0F0xxLL
+        where:
+            0x is a prefix that designates the characters following as being hexadecimal
+            F0F0F0F0 is the 32-bit base address, and pipes 1 - 5 must have this same base address.
+            xx is the unique (1-byte) address of the pipe in question.
+            LL designates the pipe address variable in your sketch to be type Long Long. [??? It probably is not necessary to include the LL when opening a pipe with radio.open commands, but it does seem necessary if you will define a variable in your sketch with the address, in order to open a pipe with radio.open..[variablename] ie pipe address is specified with a variable.] 
+        In my sketches I have followed the protocol used in the maniacbug pingpair sketches, and pipe addresses used in a sketch are defined into an array, pipes[n] for the n=number of pipes used (+1 for null).
+    Opening pipes:
+        In order for two nRF24 modules to communicate, a pipe must be open between them.
+        This means the sender must have a pipe open for Write, and the receiver must have the same pipe address open for Read.
+        Pipes are "opened" by a command in your sketch.
+        A unique pipe address can be opened for either reading or writing, but not for both reading and writing at the same time.
+        radio.openWritingPipe(0xF0F0F0F0E1LL);
+        This will open a writing pipe with specified address. Only one writing address may be open at a time.
+        OTOH there may be up to 6 reading pipes open at a time, and they are differentiated from each other by a number, from 0 to 5. (as well as having different addresses, of course)
+        Reading pipes are opened with a command of the form:
+        radio.openReadingPipe(1,0xF0F0F0F0AALL);
+        which will open reading pipe #1, at the address specified.
+        openReadingPipe(2,0xF0F0F0F0BBLL);
+        will open reading pipe #2, at the address specified.
+
+        A given pipe address cannot be open for both reading and writing at the same time. If you open a pipe for writing, and later want to read from that same pipe address, you must execute an openReadingPipe command. Similarly, if you then later want to write to that pipe again, you must again do an openWritingPipe command.
+        In order to communicate, two nRF24 modules must have the same pipe address open between them, that is, one will be reading/listening and the other will be writing on the same pipe address.
+
+    Summary Considerations:
+        In practice, in order to send messages and receive ack replies, two pipes must be opened in your sketch: one to send the message, the other for receiving the ack. The transmit and receive nodes must have opposite pipes opened. That is, if transmit node has pipes[1] opened for sending, then the receive node must have pipes[1] open for receiving. If transmit node has pipes[2] open to receive acks, then receive node must have pipes[2] open for writing.
+
+        Nomenclature confusion/gotcha:
+        In the above I've referred to "pipe 1" and "pipe 2." This might imply the pipes are numbered. Well, in fact the RECEIVE pipes do have numbers like this, referenced in the openReadingPipe command mentioned above. (radio.openReadingPipe(1,0xF0F0F0F0AALL);) This is necessary because up to 6 reading pipes can be open at a time, and you need some way to differentiate between them. However there can only be one Writing pipe open at a time, so pipe numbers are not relevant for Writing pipes.
+
+        OTOH, in the sketches that started from maniacbug's examples, the practice is to define the pipe addresses into an array pipes[n], so that a given pipe might be referred to as "pipes[2]" for example. Both reading and writing pipe addresses are captured and specified in the array, so pipes[2] for example might refer to either a reading or a writing pipe.
+
+        Bottom line is to be clear in your mind and know what you're talking about when you refer to "pipe 1" which strictly speaking only makes sense if it's a reading pipe, and be careful not to use the expression "pipe 1" when you're really talking about "pipes[1]", which is an element of the pipes array and could be either a reading or writing pipe.
