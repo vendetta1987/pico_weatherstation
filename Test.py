@@ -36,7 +36,22 @@ def ContinousSendingTest():
         utime.sleep_ms(200)
 
 
+def WakeupTest():
+    nrf_mngr = NRFManager(0, 2, 3, 4, 0, 6)
+
+    print("waiting for wakeup")
+    while True:
+        data = nrf_mngr.receive(1000)
+
+        for packet in data:
+            if "wake_up" in str(packet):
+                print("signaling awake")
+                nrf_mngr.send(b"im awake")
+                utime.sleep_ms(10)
+
+
 if __name__ == "__main__":
     # SendSensorReadingsByNRF()
     # ContinouslyReadSensors()
     # ContinousSendingTest()
+    WakeupTest()
