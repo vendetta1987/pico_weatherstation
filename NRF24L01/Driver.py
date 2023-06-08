@@ -216,6 +216,7 @@ class NRF24L01:
     # blocking wait for tx complete
     def send(self, buf, timeout=500):
         self.send_start(buf)
+        utime.sleep_us(80)
         start = utime.ticks_ms()
         result = None
         while result is None and utime.ticks_diff(utime.ticks_ms(), start) < timeout:
@@ -238,7 +239,7 @@ class NRF24L01:
 
         # enable the chip so it can send the data
         self.ce(1)
-        utime.sleep_us(15)  # needs to be >10us
+        utime.sleep_us(30)  # needs to be >10us
         self.ce(0)
 
     # returns None if send still in progress, 1 for success, 2 for fail
