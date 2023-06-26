@@ -12,7 +12,7 @@ from MQTTClient import MQTTCLient
 from Weatherstation import WeatherStation
 
 
-def RunWeatherStation(payload):
+def RunWeatherStation(payload: bytes):
     global ws
     ws.Deserialize(payload)
 
@@ -42,11 +42,10 @@ def RunWeatherStation(payload):
     mqtt_client.Publish("last_update", time.strftime("%c"))
 
 
-def WakePico(nrf: NRF24, timeout_ms: int = 100):
-    start=time.process_time_ns()
+def WakePico(nrf: NRF24, timeout_ms: int = 100) -> list[bytes]:
     nrf.reset_packages_lost()
     # wake up call
-    print("sending wake up")
+    # print("sending wake up")
     nrf.send(b"wake_up")
 
     try:
@@ -55,18 +54,18 @@ def WakePico(nrf: NRF24, timeout_ms: int = 100):
         print("Timeout waiting for transmission to complete.")
 
     # wait for reaction
-    woke_up = False
     target_time = time.process_time_ns()+(timeout_ms*1000000)
+
+    payload = []
+    woke_up = False
 
     while not woke_up and (target_time > time.process_time_ns()):
         if nrf.data_ready():
             while nrf.data_ready():
-                payload = nrf.get_payload()
-                print("received "+str(payload))
-            woke_up = True
-            print(f"roundtrip time = {(time.process_time_ns()-start)/1000000}ms")
-        else:
-            time.sleep(0.001)
+                payload.append(nrf.get_payload())
+                woke_up = True
+
+    return payload
 
 
 if __name__ == "__main__":
@@ -113,30 +112,26 @@ if __name__ == "__main__":
     nrf.open_writing_pipe(address_snd)
     nrf.show_registers()
 
-    # ws = WeatherStation()
+    ws = WeatherStation()
 
-    # mqtt_client = MQTTCLient()
-    # mqtt_client.Connect()
+    mqtt_client = MQTTCLient()
+    mqtt_client.Connect()
 
     try:
         i = 0
         while True:
-            WakePico(nrf, 200)
-            time.sleep(random.random())
+            payload = WakePico(nrf, 200)
 
-        # print(f'Receiving from {nrf_address} on channel {nrf_channel}')
-        #
-        # while True:
-        #    while nrf.data_ready():
-        #        payload = nrf.get_payload()
-        #
-        #        # DEBUG
-        #        # print(f"{i}_{payload}")
-        #        # i+=1
-        #
-        #        # RunWeatherStation(payload)
-        #
-        #    time.sleep(0.01)
+            if len(payload) > 0:
+                for packet in payload:
+                    RunWeatherStation(packet)
+                print(f"took {i} attempts")
+                i = 0
+                time.sleep(3)
+            else:
+                i += 1
+                time.sleep(0.01*random.randrange(1, 10))
+
     except:
         traceback.print_exc()
         print("powering down")
