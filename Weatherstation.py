@@ -176,8 +176,11 @@ class WeatherStation:
             "!B2sBf", 2, b"SM", 4, self.SoilMoisture))
         packed_structs.append(struct.pack(
             "!B2sBf", 2, b"ST", 4, self.SoilTemperature))
-        packed_structs.append(struct.pack("!B2sB3s", 2, b"WD", 3,
+        
+        wdLen = len(self.WindDirection)
+        packed_structs.append(struct.pack(f"!B2sB{wdLen}s", 2, b"WD", wdLen,
                                           self.WindDirection.encode("ascii")))
+        
         packed_structs.append(struct.pack(
             "!B2sBf", 2, b"WS", 4, self.WindSpeed))
         packed_structs.append(struct.pack("!B1sBf", 1, b"R", 4, self.Rain))
@@ -219,14 +222,16 @@ class WeatherStation:
             consumed_cnt += 1
 
             if value_byte_cnt == 4:
+                #float value
                 value = struct.unpack("!f", packet[:value_byte_cnt])[0]
             else:
+                #some string
                 value = struct.unpack(
                     f"!{value_byte_cnt}s", packet[:value_byte_cnt])[0]
 
             packet = packet[value_byte_cnt:]
             consumed_cnt += value_byte_cnt
-
+            
             if property_type == b"H":
                 self.Humidity = value
             elif property_type == b"T":
@@ -237,8 +242,8 @@ class WeatherStation:
                 self.SoilMoisture = value
             elif property_type == b"ST":
                 self.SoilTemperature = value
-            elif property_type == "WD":
-                self.WindDirection = value
+            elif property_type == b"WD":
+                self.WindDirection = value.decode("ascii")
             elif property_type == b"WS":
                 self.WindSpeed = value
             elif property_type == b"R":
