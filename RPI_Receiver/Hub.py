@@ -114,7 +114,7 @@ if __name__ == "__main__":
 
     ws = WeatherStation()
 
-    mqtt_client = MQTTCLient()
+    mqtt_client = MQTTCLient("raspberrypi4.fritz.box")
     mqtt_client.Connect()
 
     try:
