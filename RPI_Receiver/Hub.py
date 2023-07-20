@@ -12,6 +12,23 @@ from MQTTClient import MQTTCLient
 from Weatherstation import WeatherStation
 
 
+def RegisterSignalHandler(nrf: NRF24, pi_gpio_d):
+    import signal
+
+    def signal_handler(sig_num, frame):
+        signame = signal.Signals(sig_num).name
+        print(
+            f'Stop by Signal <{signame}> ({sig_num}) at: {time.strftime("%d.%m.%Y %H:%M:%S")}')
+        Shutdown()
+
+    # Interrupt from keyboard (CTRL + C)
+    signal.signal(signal.SIGINT,  signal_handler)
+    # Signal Handler from terminating processes
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGHUP,  signal_handler)
+    # signal.signal(signal.SIGKILL,  signal_handler) #cant be catched anyway
+
+
 def RunWeatherStation(payload: bytes):
     global ws
     ws.Deserialize(payload)
@@ -68,6 +85,14 @@ def WakePico(nrf: NRF24, timeout_ms: int = 100) -> list[bytes]:
     return payload
 
 
+def Shutdown():
+    print("powering down")
+
+    mqtt_client.Publish("status", "disconnected")
+    nrf.power_down()
+    pi_gpio_d.stop()
+
+
 if __name__ == "__main__":
     print("Python NRF24 Simple Receiver Example.")
     # Parse command line argument.
@@ -112,6 +137,8 @@ if __name__ == "__main__":
     nrf.open_writing_pipe(address_snd)
     nrf.show_registers()
 
+    RegisterSignalHandler(nrf, pi_gpio_d)
+
     ws = WeatherStation()
 
     mqtt_client = MQTTCLient("raspberrypi4.fritz.box")
@@ -124,6 +151,7 @@ if __name__ == "__main__":
 
             if len(payload) > 0:
                 for packet in payload:
+                    print(f"received {packet}")
                     RunWeatherStation(packet)
                 print(f"took {i} attempts")
                 i = 0
@@ -131,10 +159,6 @@ if __name__ == "__main__":
             else:
                 i += 1
                 time.sleep(0.01*random.randrange(1, 10))
-
     except:
         traceback.print_exc()
-        print("powering down")
-        mqtt_client.Publish("status", "disconnected")
-        nrf.power_down()
-        pi_gpio_d.stop()
+        Shutdown()
