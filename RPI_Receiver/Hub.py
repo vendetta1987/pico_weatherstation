@@ -5,14 +5,13 @@ import sys
 import time
 import traceback
 
-import pigpio
-from nrf24 import *
+from pyrf24 import RF24, RF24_PA_MAX, RF24_250KBPS, RF24_CRC_16
 
 from MQTTClient import MQTTCLient
 from Weatherstation import WeatherStation
 
 
-def RegisterSignalHandler(nrf: NRF24, pi_gpio_d):
+def RegisterSignalHandler():
     import signal
 
     def signal_handler(sig_num, frame):
@@ -29,20 +28,46 @@ def RegisterSignalHandler(nrf: NRF24, pi_gpio_d):
     # signal.signal(signal.SIGKILL,  signal_handler) #cant be catched anyway
 
 
-def RunWeatherStation(payload: bytes):
-    global ws
-    ws.Deserialize(payload)
+def InitNRF(ce_pin: int, spi: int, address_snd, address_rcv, channel: int) -> RF24:
+    radio = RF24(ce_pin, spi)
+
+    if not radio.begin():
+        raise OSError("nRF24L01 hardware isn't responding")
+
+    radio.set_pa_level(RF24_PA_MAX)
+    radio.open_tx_pipe(address_snd.encode())
+    radio.open_rx_pipe(1, address_rcv.encode())
+    radio.payload_size = 32
+    radio.channel = channel
+    radio.data_rate = RF24_250KBPS
+    radio.crc_length = RF24_CRC_16
+    radio.print_details()
+
+    return radio
+
+
+def Shutdown():
+    print("powering down")
+
+    global do_run
+    do_run = False
+    mqtt_client.Publish("status", "disconnected")
+    nrf.power = False
+    sys.exit(0)
+
+
+def ForwardWeatherStationData(ws: WeatherStation, mqtt_client: MQTTCLient, ws_data: bytes):
+    ws.Deserialize(ws_data)
 
     print(f"T={ws.Temperature:.2f}\tH={ws.Humidity:.2f}\t\
             P={ws.Pressure:.2f}\tSM={ws.SoilMoisture:.2f}\t\
             ST={ws.SoilTemperature:.2f}\tWD={ws.WindDirection}\t\
             WS={ws.WindSpeed:.2f}\tR={ws.Rain:.2f}")
 
-    global mqtt_client
-    mqtt_client.Publish("temperature", ws.Temperature)
-    mqtt_client.Publish("humidity", ws.Humidity)
-    mqtt_client.Publish("pressure", ws.Pressure)
-    mqtt_client.Publish("rain", ws.Rain)
+    mqtt_client.Publish("temperature", str(ws.Temperature))
+    mqtt_client.Publish("humidity", str(ws.Humidity))
+    mqtt_client.Publish("pressure", str(ws.Pressure))
+    mqtt_client.Publish("rain", str(ws.Rain))
 
     soil = {
         "moisture": ws.SoilMoisture,
@@ -59,38 +84,27 @@ def RunWeatherStation(payload: bytes):
     mqtt_client.Publish("last_update", time.strftime("%c"))
 
 
-def WakePico(nrf: NRF24, timeout_ms: int = 100) -> list[bytes]:
-    nrf.reset_packages_lost()
+def WakePico(nrf: RF24, timeout_ms: int = 100) -> list[bytes]:
     # wake up call
     # print("sending wake up")
-    nrf.send(b"wake_up")
+    nrf.listen = False
+    result = nrf.write(b"wake_up")
 
-    try:
-        nrf.wait_until_sent()
-    except TimeoutError:
+    if not result:
         print("Timeout waiting for transmission to complete.")
-
     # wait for reaction
     target_time = time.process_time_ns()+(timeout_ms*1000000)
 
     payload = []
-    woke_up = False
+    nrf.listen = True
 
-    while not woke_up and (target_time > time.process_time_ns()):
-        if nrf.data_ready():
-            while nrf.data_ready():
-                payload.append(nrf.get_payload())
-                woke_up = True
+    while target_time > time.process_time_ns():
+        has_payload, _ = nrf.available_pipe()
+        if has_payload:
+            payload.append(nrf.read(nrf.payload_size))
+            break
 
     return payload
-
-
-def Shutdown():
-    print("powering down")
-
-    mqtt_client.Publish("status", "disconnected")
-    nrf.power_down()
-    pi_gpio_d.stop()
 
 
 if __name__ == "__main__":
@@ -98,22 +112,19 @@ if __name__ == "__main__":
     # Parse command line argument.
     arg_parser = argparse.ArgumentParser(
         prog="Hub.py", description="WeatherStation hub application with MQTT connection")
-    arg_parser.add_argument('-n', '--hostname', type=str, default='localhost',
-                            help="Hostname for the device running the pigpio daemon.")
-    arg_parser.add_argument('-p', '--port', type=int, default=8888,
-                            help="Port number of the pigpio daemon.")
-    arg_parser.add_argument('--receive_addr', type=str, nargs='?', default='WSone',
-                            help="receiving pipe address (5 ASCII characters)")
-    arg_parser.add_argument('--send_addr', type=str, nargs='?', default='WStwo',
-                            help="sending pipe address (5 ASCII characters)")
+    arg_parser.add_argument('-n', '--hostname', type=str, default='raspberrypi4.fritz.box',
+                            help="Hostname for MQTT server.")
     arg_parser.add_argument('-ce', type=int, nargs='?', default=23,
                             help="chip enbale pin")
     arg_parser.add_argument('--channel', type=int, nargs='?', default=100,
                             help="NRF channel")
+    arg_parser.add_argument('--receive_addr', type=str, nargs='?', default='WSone',
+                            help="receiving pipe address (5 ASCII characters)")
+    arg_parser.add_argument('--send_addr', type=str, nargs='?', default='WStwo',
+                            help="sending pipe address (5 ASCII characters)")
 
     args = arg_parser.parse_args()
-    hostname = args.hostname
-    port = args.port
+    mqtt_hostname = args.hostname
     address_rcv = args.receive_addr
     address_snd = args.send_addr
     ce_pin = args.ce
@@ -124,35 +135,25 @@ if __name__ == "__main__":
             f'Addresses must be between 3 and 5 ASCII characters. receive={address_rcv} send={address_snd}')
         sys.exit(1)
 
-    print(f'Connecting to GPIO daemon on {hostname}:{port} ...')
-    pi_gpio_d = pigpio.pi(hostname, port)
+    RegisterSignalHandler()
 
-    if not pi_gpio_d.connected:
-        print("Not connected to Raspberry Pi ... goodbye.")
-        sys.exit()
-
-    nrf = NRF24(pi_gpio_d, ce=ce_pin, payload_size=RF24_PAYLOAD.MAX, channel=nrf_channel,
-                data_rate=RF24_DATA_RATE.RATE_250KBPS, pa_level=RF24_PA.MAX, address_bytes=len(address_rcv))
-    nrf.open_reading_pipe(RF24_RX_ADDR.P1, address_rcv)
-    nrf.open_writing_pipe(address_snd)
-    nrf.show_registers()
-
-    RegisterSignalHandler(nrf, pi_gpio_d)
-
+    nrf = InitNRF(ce_pin, 0, address_snd, address_rcv, nrf_channel)
     ws = WeatherStation()
 
-    mqtt_client = MQTTCLient("raspberrypi4.fritz.box")
+    mqtt_client = MQTTCLient(mqtt_hostname)
     mqtt_client.Connect()
+
+    do_run = True
 
     try:
         i = 0
-        while True:
+        while do_run:
             payload = WakePico(nrf, 200)
 
             if len(payload) > 0:
                 for packet in payload:
                     print(f"received {packet}")
-                    RunWeatherStation(packet)
+                    ForwardWeatherStationData(ws, mqtt_client, packet)
                 print(f"took {i} attempts")
                 i = 0
                 time.sleep(3)
@@ -160,5 +161,5 @@ if __name__ == "__main__":
                 i += 1
                 time.sleep(0.01*random.randrange(1, 10))
     except:
-        traceback.print_exc()
+        #traceback.print_exc()
         Shutdown()
