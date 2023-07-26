@@ -86,12 +86,12 @@ def ForwardWeatherStationData(ws: WeatherStation, mqtt_client: MQTTCLient, ws_da
 
 def WakePico(nrf: RF24, timeout_ms: int = 100) -> list[bytes]:
     # wake up call
-    # print("sending wake up")
     nrf.listen = False
     result = nrf.write(b"wake_up")
 
     if not result:
-        print("Timeout waiting for transmission to complete.")
+        print("Timeout during wakeup call")
+        return []
     # wait for reaction
     target_time = time.process_time_ns()+(timeout_ms*1000000)
 
@@ -108,20 +108,18 @@ def WakePico(nrf: RF24, timeout_ms: int = 100) -> list[bytes]:
 
 
 if __name__ == "__main__":
-    print("Python NRF24 Simple Receiver Example.")
-    # Parse command line argument.
     arg_parser = argparse.ArgumentParser(
         prog="Hub.py", description="WeatherStation hub application with MQTT connection")
     arg_parser.add_argument('-n', '--hostname', type=str, default='raspberrypi4.fritz.box',
                             help="Hostname for MQTT server.")
     arg_parser.add_argument('-ce', type=int, nargs='?', default=23,
-                            help="chip enbale pin")
+                            help="NRF chip enbale pin")
     arg_parser.add_argument('--channel', type=int, nargs='?', default=100,
                             help="NRF channel")
     arg_parser.add_argument('--receive_addr', type=str, nargs='?', default='WSone',
-                            help="receiving pipe address (5 ASCII characters)")
+                            help="NRF receiving pipe address (5 ASCII characters)")
     arg_parser.add_argument('--send_addr', type=str, nargs='?', default='WStwo',
-                            help="sending pipe address (5 ASCII characters)")
+                            help="NRF sending pipe address (5 ASCII characters)")
 
     args = arg_parser.parse_args()
     mqtt_hostname = args.hostname
@@ -152,14 +150,15 @@ if __name__ == "__main__":
 
             if len(payload) > 0:
                 for packet in payload:
-                    print(f"received {packet}")
                     ForwardWeatherStationData(ws, mqtt_client, packet)
-                print(f"took {i} attempts")
+                #print(f"took {i} attempts")
                 i = 0
-                time.sleep(3)
+                #time.sleep(3)
+                break
             else:
                 i += 1
                 time.sleep(0.01*random.randrange(1, 10))
     except:
-        #traceback.print_exc()
-        Shutdown()
+        traceback.print_exc()
+
+    Shutdown()
