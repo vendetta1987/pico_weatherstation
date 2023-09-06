@@ -1,3 +1,4 @@
+import utime
 from machine import SPI, Pin
 
 from BME280.adafruit_bme280.basic import Adafruit_BME280
@@ -22,7 +23,15 @@ class BMEManager():
 
     @property
     def Temperature(self) -> float:
-        return self._sensor.temperature
+        # once to wake the sensor
+        _ = self._sensor.temperature
+        utime.sleep_ms(50)
+        # average the next two readings
+        val1 = self._sensor.temperature
+        utime.sleep_ms(50)
+        val2 = self._sensor.temperature
+
+        return (val1+val2)/2
 
     @property
     def Humidity(self) -> float:
