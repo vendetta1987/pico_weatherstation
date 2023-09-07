@@ -41,37 +41,39 @@ class WeatherStation:
     _rain: float
 
     def __init__(self):
+        self._bme = None
+        self._temperature = -1
+        self._humidity = -1
+        self._pressure = -1
+
         if bme_available:
             self._bme = BMEManager(0, 2, 3, 4, 1)
-        else:
-            self._bme = None
-            self._temperature = -1
-            self._humidity = -1
-            self._pressure = -1
+        #
+        self._soil_M = None
+        self._soil_moisture = -1
 
         if soil_available:
             self._soil_M = SoilMoistureManager(27)
-        else:
-            self._soil_M = None
-            self._soil_moisture = -1
+        #
+        self._soil_T = None
+        self._soil_temperature = -1
 
         if ds18_available:
             self._soil_T = DS18B20Manager(13)
-        else:
-            self._soil_T = None
-            self._soil_temperature = -1
+        #
+        self._wind_vane = None
+        self._wind_anemometer = None
+        self._rain_gauge = None
+        self._wind_direction = "X"
+        self._wind_speed = -1
+        self._rain = -1
 
         if ds15_available:
             self._wind_vane = WindVane(26)
-            self._wind_anemometer = TriggerCounter(2.4, 22)
-            self._rain_gauge = TriggerCounter(0.2794, 16)
-        else:
-            self._wind_vane = None
-            self._wind_anemometer = None
-            self._rain_gauge = None
-            self._wind_direction = "X"
-            self._wind_speed = -1
-            self._rain = -1
+            # equals 2.4km/h for one trigger per second
+            self._wind_anemometer = TriggerCounter(2.4, 22, True)
+            # equals 0.2794mm per trigger
+            self._rain_gauge = TriggerCounter(0.2794, 16, False)
 
     @property
     def Temperature(self) -> float:
@@ -176,11 +178,11 @@ class WeatherStation:
             "!B2sBf", 2, b"SM", 4, self.SoilMoisture))
         packed_structs.append(struct.pack(
             "!B2sBf", 2, b"ST", 4, self.SoilTemperature))
-        
+
         wdLen = len(self.WindDirection)
         packed_structs.append(struct.pack(f"!B2sB{wdLen}s", 2, b"WD", wdLen,
                                           self.WindDirection.encode("ascii")))
-        
+
         packed_structs.append(struct.pack(
             "!B2sBf", 2, b"WS", 4, self.WindSpeed))
         packed_structs.append(struct.pack("!B1sBf", 1, b"R", 4, self.Rain))
@@ -222,16 +224,16 @@ class WeatherStation:
             consumed_cnt += 1
 
             if value_byte_cnt == 4:
-                #float value
+                # float value
                 value = struct.unpack("!f", packet[:value_byte_cnt])[0]
             else:
-                #some string
+                # some string
                 value = struct.unpack(
                     f"!{value_byte_cnt}s", packet[:value_byte_cnt])[0]
 
             packet = packet[value_byte_cnt:]
             consumed_cnt += value_byte_cnt
-            
+
             if property_type == b"H":
                 self.Humidity = value
             elif property_type == b"T":
