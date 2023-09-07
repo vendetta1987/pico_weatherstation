@@ -90,8 +90,11 @@ def WakePico(nrf: RF24, timeout_ms: int = 100) -> list[bytes]:
     result = nrf.write(b"wake_up")
 
     if not result:
-        print("Timeout during wakeup call")
+        print(".", end="")
+        sys.stdout.flush()
         return []
+    else:
+        print("")
     # wait for reaction
     target_time = time.process_time_ns()+(timeout_ms*1000000)
 
@@ -151,7 +154,7 @@ if __name__ == "__main__":
             if len(payload) > 0:
                 for packet in payload:
                     ForwardWeatherStationData(ws, mqtt_client, packet)
-                #print(f"took {i} attempts")
+                print(f"took {i} attempts")
                 i = 0
                 #time.sleep(3)
                 break
