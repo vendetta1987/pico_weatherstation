@@ -1,3 +1,4 @@
+import math
 import struct
 
 try:
@@ -22,8 +23,8 @@ else:
     ds18_available = True
 
 try:
-    from DS15901.WindVane import WindVane
     from DS15901.TriggerCounter import TriggerCounter
+    from DS15901.WindVane import WindVane
 except:
     ds15_available = False
 else:
@@ -41,32 +42,32 @@ class WeatherStation:
     _rain: float
 
     def __init__(self):
-        self._bme = None
-        self._temperature = -1
-        self._humidity = -1
-        self._pressure = -1
+        self._bme_mngr = None
+        self._temperature = math.nan
+        self._humidity = math.nan
+        self._pressure = math.nan
 
         if bme_available:
-            self._bme = BMEManager(0, 2, 3, 4, 1)
+            self._bme_mngr = BMEManager(0, 2, 3, 4, 1)
         #
-        self._soil_M = None
-        self._soil_moisture = -1
+        self._soil_moist_mngr = None
+        self._soil_moisture = math.nan
 
         if soil_available:
-            self._soil_M = SoilMoistureManager(27)
+            self._soil_moist_mngr = SoilMoistureManager(27)
         #
-        self._soil_T = None
-        self._soil_temperature = -1
+        self._soil_temp_mngr = None
+        self._soil_temperature = math.nan
 
         if ds18_available:
-            self._soil_T = DS18B20Manager(13)
+            self._soil_temp_mngr = DS18B20Manager(13)
         #
         self._wind_vane = None
         self._wind_anemometer = None
         self._rain_gauge = None
         self._wind_direction = "X"
-        self._wind_speed = -1
-        self._rain = -1
+        self._wind_speed = math.nan
+        self._rain = math.nan
 
         if ds15_available:
             self._wind_vane = WindVane(26)
@@ -77,8 +78,8 @@ class WeatherStation:
 
     @property
     def Temperature(self) -> float:
-        if self._bme is not None:
-            return self._bme.Temperature
+        if self._bme_mngr is not None:
+            return self._bme_mngr.Temperature
         else:
             return self._temperature
 
@@ -88,8 +89,8 @@ class WeatherStation:
 
     @property
     def Humidity(self) -> float:
-        if self._bme is not None:
-            return self._bme.Humidity
+        if self._bme_mngr is not None:
+            return self._bme_mngr.Humidity
         else:
             return self._humidity
 
@@ -99,8 +100,8 @@ class WeatherStation:
 
     @property
     def Pressure(self) -> float:
-        if self._bme is not None:
-            return self._bme.Pressure
+        if self._bme_mngr is not None:
+            return self._bme_mngr.Pressure
         else:
             return self._pressure
 
@@ -110,8 +111,8 @@ class WeatherStation:
 
     @property
     def SoilMoisture(self) -> float:
-        if self._soil_M is not None:
-            return self._soil_M.Moisture
+        if self._soil_moist_mngr is not None:
+            return self._soil_moist_mngr.Moisture
         else:
             return self._soil_moisture
 
@@ -121,8 +122,8 @@ class WeatherStation:
 
     @property
     def SoilTemperature(self) -> float:
-        if self._soil_T is not None:
-            return self._soil_T.Temperature
+        if self._soil_temp_mngr is not None:
+            return self._soil_temp_mngr.Temperature
         else:
             return self._soil_temperature
 

@@ -4,6 +4,7 @@ import random
 import sys
 import time
 import traceback
+import math
 
 from pyrf24 import RF24, RF24_PA_MAX, RF24_250KBPS, RF24_CRC_16
 
@@ -64,42 +65,46 @@ def ForwardWeatherStationData(ws: WeatherStation, mqtt_client: MQTTCLient, ws_da
             ST={ws.SoilTemperature:.2f}\tWD={ws.WindDirection}\t\
             WS={ws.WindSpeed:.2f}\tR={ws.Rain:.2f}")
 
-    mqtt_client.Publish("temperature", str(ws.Temperature))
-    mqtt_client.Publish("humidity", str(ws.Humidity))
-    mqtt_client.Publish("pressure", str(ws.Pressure))
-    mqtt_client.Publish("rain", str(ws.Rain))
+    if not math.isnan(ws.Temperature):
+        mqtt_client.Publish("temperature", str(ws.Temperature))
+    if not math.isnan(ws.Humidity):
+        mqtt_client.Publish("humidity", str(ws.Humidity))
+    if not math.isnan(ws.Pressure):
+        mqtt_client.Publish("pressure", str(ws.Pressure))
+    if not math.isnan(ws.Rain):
+        mqtt_client.Publish("rain", str(ws.Rain))
 
-    soil = {
-        "moisture": ws.SoilMoisture,
-        "temperature": ws.SoilTemperature
-    }
-    mqtt_client.Publish("soil", json.dumps(soil))
+    soil = {}
 
-    wind = {
-        "direction": ws.WindDirection,
-        "speed": ws.WindSpeed,
-    }
-    mqtt_client.Publish("wind", json.dumps(wind))
+    if not math.isnan(ws.SoilMoisture):
+        soil["moisture"] = ws.SoilMoisture
+    if not math.isnan(ws.SoilTemperature):
+        soil["temperature"] = ws.SoilTemperature
+
+    if len(soil) > 0:
+        mqtt_client.Publish("soil", json.dumps(soil))
+
+    wind = {}
+
+    if ws.WindDirection != "X":
+        wind["direction"] = ws.WindDirection
+    if not math.isnan(ws.WindSpeed):
+        wind["speed"] = ws.WindSpeed
+
+    if len(wind) > 0:
+        mqtt_client.Publish("wind", json.dumps(wind))
 
     mqtt_client.Publish("last_update", time.strftime("%c"))
 
 
 def WakePico(nrf: RF24, timeout_ms: int = 100) -> list[bytes]:
+    payload = []
     # wake up call
     nrf.listen = False
-    result = nrf.write(b"wake_up")
-
-    if not result:
-        print(".", end="")
-        sys.stdout.flush()
-        return []
-    else:
-        print("")
+    nrf.write(b"wake_up")
     # wait for reaction
-    target_time = time.process_time_ns()+(timeout_ms*1000000)
-
-    payload = []
     nrf.listen = True
+    target_time = time.process_time_ns()+(timeout_ms*1000000)
 
     while target_time > time.process_time_ns():
         has_payload, _ = nrf.available_pipe()
@@ -145,22 +150,24 @@ if __name__ == "__main__":
     mqtt_client.Connect()
 
     do_run = True
+    retry_limit = 100
 
     try:
         i = 0
-        while do_run:
+        while i < retry_limit:
             payload = WakePico(nrf, 200)
 
             if len(payload) > 0:
                 for packet in payload:
                     ForwardWeatherStationData(ws, mqtt_client, packet)
                 print(f"took {i} attempts")
-                i = 0
-                #time.sleep(3)
                 break
             else:
                 i += 1
                 time.sleep(0.01*random.randrange(1, 10))
+
+        if i >= retry_limit:
+            print("retry limit exceeded")
     except:
         traceback.print_exc()
 
