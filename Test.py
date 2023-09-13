@@ -4,6 +4,7 @@ from NRF24L01.Manager import NRFManager
 from Weatherstation import WeatherStation
 from machine import Pin
 
+
 def SendSensorReadingsByNRF():
     ws = WeatherStation()
     nrf_mngr = NRFManager(0, 2, 3, 4, 0, 6)
@@ -69,6 +70,8 @@ if __name__ == "__main__":
     # WakeupTest()
 
     led = Pin(25, Pin.OUT)
+    # by leaving this on we might prevent the power source from shutting down due to low demand
+    led.on()
 
     nrf_mngr = NRFManager(0, 2, 3, 4, 0, 6)
     ws = WeatherStation()
@@ -77,8 +80,8 @@ if __name__ == "__main__":
         # print("checking")
         if CheckWakeupCall():
             print("received wakeup, sending data")
-            led.on()
+            led.off()
             for packet in ws.Serialize():
                 nrf_mngr.send(packet)
-        led.off()
+        led.on()
         utime.sleep(3)
