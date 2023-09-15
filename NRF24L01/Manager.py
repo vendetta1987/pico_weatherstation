@@ -27,13 +27,15 @@ class NRFManager:
         self.nrf.open_tx_pipe(address_send)
         self.nrf.open_rx_pipe(1, address_rec)
 
-    def send(self, data: bytes):
+    def send(self, data: bytes) -> bool:
         self.nrf.stop_listening()
 
         try:
             self.nrf.send(data)
+            return True
         except:
-            print(f"error sending {data}")
+            #print(f"error sending {data}")
+            return False
 
     def receive(self, timeout_ms: int = 100) -> list[bytes]:
         received_data = False
