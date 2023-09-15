@@ -51,7 +51,7 @@ def WakeupTest():
                 utime.sleep_ms(10)
 
 
-def CheckWakeupCall():
+def ReceivedWakeupCall():
     global nrf_mngr
 
     data = nrf_mngr.receive(1000)
@@ -77,11 +77,12 @@ if __name__ == "__main__":
     ws = WeatherStation()
 
     while True:
-        # print("checking")
-        if CheckWakeupCall():
-            print("received wakeup, sending data")
+        if ReceivedWakeupCall():
+            packets = ws.Serialize()
             led.off()
-            for packet in ws.Serialize():
-                nrf_mngr.send(packet)
+            for i in range(10):
+                print(f"sending data, try {i}")
+                for packet in packets:
+                    nrf_mngr.send(packet)
         led.on()
         utime.sleep(3)
