@@ -57,8 +57,9 @@ def Shutdown():
     sys.exit(0)
 
 
-def ForwardWeatherStationData(ws: WeatherStation, mqtt_client: MQTTCLient, ws_data: bytes):
-    ws.Deserialize(ws_data)
+def ForwardWeatherStationData(ws: WeatherStation, mqtt_client: MQTTCLient, received_packets: list[bytes]):
+    for packet in received_packets:
+        ws.Deserialize(packet)
 
     print(f"T={ws.Temperature:.2f}\tH={ws.Humidity:.2f}\t\
             P={ws.Pressure:.2f}\tSM={ws.SoilMoisture:.2f}\t\
@@ -97,22 +98,27 @@ def ForwardWeatherStationData(ws: WeatherStation, mqtt_client: MQTTCLient, ws_da
     mqtt_client.Publish("last_update", time.strftime("%c"))
 
 
-def WakePico(nrf: RF24, timeout_ms: int = 100) -> list[bytes]:
-    payload = []
+def WakePicoAndReceive(nrf: RF24, timeout_ms: int = 100) -> list[bytes]:
     # wake up call
     nrf.listen = False
     nrf.write(b"wake_up")
     # wait for reaction
     nrf.listen = True
-    target_time = time.process_time_ns()+(timeout_ms*1000000)
+
+    received_packets = []
+    target_time = time.process_time_ns() + (timeout_ms * 1000000)
 
     while target_time > time.process_time_ns():
         has_payload, _ = nrf.available_pipe()
         if has_payload:
-            payload.append(nrf.read(nrf.payload_size))
-            break
+            packet = nrf.read(nrf.payload_size)
+            received_packets.append(packet)
 
-    return payload
+    unique_packets = {}
+    for packet in received_packets:
+        unique_packets[str(packet)] = packet
+
+    return list(unique_packets.values())
 
 
 if __name__ == "__main__":
@@ -149,18 +155,16 @@ if __name__ == "__main__":
     mqtt_client = MQTTCLient(mqtt_hostname)
     mqtt_client.Connect()
 
-    do_run = True
     retry_limit = 100
 
     try:
         i = 0
         while i < retry_limit:
-            payload = WakePico(nrf, 200)
+            received_packets = WakePicoAndReceive(nrf, 500)
 
-            if len(payload) > 0:
-                for packet in payload:
-                    ForwardWeatherStationData(ws, mqtt_client, packet)
-                print(f"took {i} attempts")
+            if len(received_packets) > 0:
+                ForwardWeatherStationData(ws, mqtt_client, received_packets)
+                print(f"took {i} attempts, received {len(received_packets)} packets")
                 break
             else:
                 i += 1
