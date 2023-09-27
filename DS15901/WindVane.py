@@ -40,18 +40,42 @@ LIMITS = (
 
 
 class WindVane:
+    _DEFAULT_DIRECTION: str = "X"
+
     _sensor: ADC
     _direction_count: int = 16
+    _histogram: dict[str, int]
 
     def __init__(self, pin: int):
         self._sensor = ADC(pin)
+        self.ResetHistogram()
+
+    def ResetHistogram(self):
+        self._histogram = {}
+
+        for dir in DIRECTIONS:
+            self._histogram[dir] = 0
+
+    def UpdateHistogram(self):
+        wind_dir = self.Direction
+
+        if wind_dir in self._histogram:
+            self._histogram[wind_dir] += 1
+
+    @property
+    def AverageDirection(self) -> str:
+        if max(self._histogram.values()) > 0:
+            return max(self._histogram, key=lambda k: self._histogram[k])
+        else:
+            return WindVane._DEFAULT_DIRECTION
 
     @property
     def Direction(self) -> str:
         adc_value = self._sensor.read_u16()
+        wind_dir = WindVane._DEFAULT_DIRECTION
 
         for idx in range(self._direction_count):
             if adc_value < LIMITS[idx]:
-                return DIRECTIONS[idx]
+                wind_dir = DIRECTIONS[idx]
 
-        return "unkown"
+        return wind_dir

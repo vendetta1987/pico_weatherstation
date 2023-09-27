@@ -134,7 +134,7 @@ class WeatherStation:
     @property
     def WindDirection(self) -> str:
         if self._wind_vane is not None:
-            return self._wind_vane.Direction
+            return self._wind_vane.AverageDirection
         else:
             return self._wind_direction
 
@@ -164,6 +164,14 @@ class WeatherStation:
     def Rain(self, val: float):
         self._rain = val
 
+    def Update(self):
+        if self._wind_vane is not None:
+            self._wind_vane.UpdateHistogram()
+
+    def Reset(self):
+        if self._wind_vane is not None:
+            self._wind_vane.ResetHistogram()
+
     def Serialize(self) -> list[bytes]:
         packed_structs = []
         # !  network byte order
@@ -180,9 +188,10 @@ class WeatherStation:
         packed_structs.append(struct.pack(
             "!B2sBf", 2, b"ST", 4, self.SoilTemperature))
 
-        wdLen = len(self.WindDirection)
-        packed_structs.append(struct.pack(f"!B2sB{wdLen}s", 2, b"WD", wdLen,
-                                          self.WindDirection.encode("ascii")))
+        wind_dir = self.WindDirection
+        wind_dir_len = len(wind_dir)
+        packed_structs.append(struct.pack(f"!B2sB{wind_dir_len}s", 2, b"WD", wind_dir_len,
+                                          wind_dir.encode("ascii")))
 
         packed_structs.append(struct.pack(
             "!B2sBf", 2, b"WS", 4, self.WindSpeed))

@@ -70,19 +70,24 @@ if __name__ == "__main__":
     # WakeupTest()
 
     led = Pin(25, Pin.OUT)
-    # by leaving this on we might prevent the power source from shutting down due to low demand
-    led.on()
+    led.off()
 
     nrf_mngr = NRFManager(0, 2, 3, 4, 0, 6)
     ws = WeatherStation()
 
     while True:
+        ws.Update()
+
         if ReceivedWakeupCall():
+            led.on()
             packets = ws.Serialize()
-            led.off()
+
             for i in range(10):
                 print(f"sending data, try {i}")
                 for packet in packets:
                     nrf_mngr.send(packet)
-        led.on()
+
+            ws.Reset()
+
+        led.off()
         utime.sleep(3)
