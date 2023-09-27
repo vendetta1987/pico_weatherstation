@@ -42,7 +42,7 @@ def InitNRF(ce_pin: int, spi: int, address_snd, address_rcv, channel: int) -> RF
     radio.channel = channel
     radio.data_rate = RF24_250KBPS
     radio.crc_length = RF24_CRC_16
-    radio.print_details()
+    #radio.print_details()
 
     return radio
 
