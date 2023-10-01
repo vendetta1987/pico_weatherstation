@@ -22,6 +22,7 @@ def ContinouslyReadSensors():
     ws = WeatherStation()
 
     while True:
+        ws.Update()
         print(f"Temperature={ws.Temperature} Humidity={ws.Humidity} Pressure={ws.Pressure} WindDirection={ws.WindDirection} WindSpeed={ws.WindSpeed} Rain={ws.Rain} SoilTemperature={ws.SoilTemperature} SoilMoisture={ws.SoilMoisture}")
         utime.sleep_ms(3000)
 
@@ -91,3 +92,5 @@ if __name__ == "__main__":
 
         led.off()
         utime.sleep(3)
+
+
