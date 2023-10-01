@@ -1,49 +1,27 @@
 from machine import ADC
 
-DIRECTIONS = (
-    "ESE",
-    "ENE",
-    "E",
-    "SSE",
-    "SE",
-    "SSW",
-    "S",
-    "NNE",
-    "NE",
-    "WSW",
-    "SW",
-    "NNW",
-    "N",
-    "WNW",
-    "NW",
-    "W"
-)
-
-LIMITS = (
-    9350,
-    10913,
-    13174,
-    17766,
-    23293,
-    27698,
-    33600,
-    39480,
-    44922,
-    49387,
-    51751,
-    55073,
-    57558,
-    59413,
-    61435,
-    65536
-)
-
 
 class WindVane:
     _DEFAULT_DIRECTION: str = "X"
+    _ADC_DIR_LUT: tuple[tuple[int, str], ...] = (
+        (9350, "ESE"),
+        (10913, "ENE"),
+        (13174, "E"),
+        (17766, "SSE"),
+        (23293, "SE"),
+        (27698, "SSW"),
+        (33600, "S"),
+        (39480, "NNE"),
+        (44922, "NE"),
+        (49387, "WSW"),
+        (51751, "SW"),
+        (55073, "NNW"),
+        (57558, "N"),
+        (59413, "WNW"),
+        (61435, "NW"),
+        (65536, "W"))
 
     _sensor: ADC
-    _direction_count: int = 16
     _histogram: dict[str, int]
 
     def __init__(self, pin: int):
@@ -53,7 +31,7 @@ class WindVane:
     def ResetHistogram(self):
         self._histogram = {}
 
-        for dir in DIRECTIONS:
+        for _, dir in WindVane._ADC_DIR_LUT:
             self._histogram[dir] = 0
 
     def UpdateHistogram(self):
@@ -74,8 +52,8 @@ class WindVane:
         adc_value = self._sensor.read_u16()
         wind_dir = WindVane._DEFAULT_DIRECTION
 
-        for idx in range(self._direction_count):
-            if adc_value < LIMITS[idx]:
-                wind_dir = DIRECTIONS[idx]
+        for idx in range(len(WindVane._ADC_DIR_LUT)-1):
+            if adc_value > WindVane._ADC_DIR_LUT[idx][0]:
+                wind_dir = WindVane._ADC_DIR_LUT[idx+1][1]
 
         return wind_dir
